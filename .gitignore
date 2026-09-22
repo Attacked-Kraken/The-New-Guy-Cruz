@@ -12,3 +12,13 @@ __pycache__/
 *.log
 .idea/
 .vscode/
+
+# secrets / env backups
+.env.*
+!.env.example
+
+# runtime chat/memory/exports (PII / local state)
+data/
+!data/.gitkeep
+logs/
+telegram_bot.log

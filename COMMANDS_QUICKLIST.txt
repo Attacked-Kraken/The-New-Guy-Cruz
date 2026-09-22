@@ -1,0 +1,11 @@
+The New Guy Cruz — quick command list
+=====================================
+/start /help /cmds /status /prefs /keyboard
+/plan auto|fast|deep   /auto /fast /deep /compact /model
+/memory /remember <fact> /forget [last]
+/ops <ask>             (or: "do it on the computer")
+/paper                 (read-only cruzbot paper status)
+/tstatus               (short cruzbot trading status)
+/project <name>|clear  (export folder scope)
+/files /download /attack
+/balance /reload /upgrade /reset

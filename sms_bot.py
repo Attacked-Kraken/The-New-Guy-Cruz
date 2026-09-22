@@ -64,6 +64,53 @@ def send_sms(body: str) -> str:
     return message.sid
 
 
+
+def notify_sms(body: str, *, prefix: str = "NG:") -> bool:
+    """Best-effort SMS for critical alerts. Silent no-op if Twilio incomplete.
+
+    Normalizes SMS_TO_NUMBER to E.164 (+1 for US 10-digit). Never logs the number.
+    """
+    import re
+    import logging
+    log = logging.getLogger(__name__)
+
+    def _e164(n: str) -> str:
+        raw = (n or "").strip()
+        digits = re.sub(r"\D", "", raw)
+        if not digits:
+            return ""
+        if raw.startswith("+") and len(digits) >= 10:
+            return "+" + digits
+        if len(digits) == 10:
+            return "+1" + digits
+        if len(digits) == 11 and digits.startswith("1"):
+            return "+" + digits
+        return "+" + digits
+
+    sid = (os.getenv("TWILIO_ACCOUNT_SID") or "").strip()
+    token = (os.getenv("TWILIO_AUTH_TOKEN") or "").strip()
+    frm = (os.getenv("TWILIO_FROM_NUMBER") or "").strip()
+    to = _e164(os.getenv("SMS_TO_NUMBER") or "")
+    if not (sid and token and frm and to):
+        log.debug("notify_sms skipped — Twilio not fully configured")
+        return False
+    try:
+        from twilio.rest import Client as TwilioClient
+    except ImportError:
+        log.debug("notify_sms skipped — twilio not installed")
+        return False
+    text_out = f"{prefix} {(body or '').strip()}".strip()
+    if len(text_out) > 320:
+        text_out = text_out[:319] + "…"
+    try:
+        TwilioClient(sid, token).messages.create(body=text_out, from_=frm, to=to)
+        log.info("notify_sms sent len=%d", len(text_out))
+        return True
+    except Exception as exc:  # noqa: BLE001
+        log.warning("notify_sms failed: %s", type(exc).__name__)
+        return False
+
+
 def reply_via_sms(user_message: str) -> str:
     """Ask Grok and send the reply over SMS. Returns Twilio message SID."""
     settings = get_settings()

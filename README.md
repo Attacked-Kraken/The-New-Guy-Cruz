@@ -7,8 +7,12 @@ CLI works offline from your terminal; SMS (Twilio) is an optional paid secondary
 
 - Multi-turn conversation memory (bounded per chat)
 - Persona: *The New Guy Cruz* — sharp, helpful, not corporate
-- Telegram: `/start` `/reset` `/help` + normal messages → Grok
-- Long Telegram replies collapse (~800 chars) with inline **▼ Show more** / **▲ Hide**
+- **Photos** and **code/files** — vision for images; text extraction for `.py`, `.js`, `.md`, etc.
+- **Streaming** replies (placeholder message edited as tokens arrive)
+- Chat toggles: `/fast`, `/compact`, `/model`, `/prefs`
+- Command menu via BotFather-style `set_my_commands`
+- Long Telegram replies collapse (~280 chars preview) with inline **▼ Show more** / **▲ Hide**
+- `/upgrade` — ask Grok for concrete upgrade ideas (reads local README; **never** auto-commits or pushes)
 - Secrets only via environment / `.env` (never commit real keys)
 
 ## Quick start (Telegram)
@@ -39,6 +43,7 @@ Edit `.env`:
 ```env
 XAI_API_KEY=xai-...
 XAI_MODEL=grok-3
+XAI_VISION_MODEL=grok-4.6
 TELEGRAM_BOT_TOKEN=123456:ABC...
 # Optional: lock the bot to your Telegram user/chat id(s)
 TELEGRAM_CHAT_ID=
@@ -51,25 +56,52 @@ MAX_HISTORY=20
 ### 4. Run
 
 ```bash
-python telegram_bot.py
+# Prefer unsetting a stale parent TELEGRAM_BOT_TOKEN so .env wins:
+env -u TELEGRAM_BOT_TOKEN python telegram_bot.py
 ```
 
 Open Telegram, find your bot, tap **Start**, and chat.  
-Long answers arrive collapsed — tap **▼ Show more** to expand, **▲ Hide** to collapse again.
+Send photos or `.py` / `.md` documents. Long answers arrive collapsed — tap **▼ Show more**.
 
-Optional allowlist: set `TELEGRAM_CHAT_ID` to your numeric chat id (or comma-separated ids).  
-Message the bot once, then check logs / use a bot like `@userinfobot` to learn your id.
+Optional allowlist: set `TELEGRAM_CHAT_ID` to your numeric chat id (or comma-separated ids).
 
 ### Codespaces / remote
 
-Same steps: copy `.env.example` → `.env`, fill secrets as Codespace secrets or a local `.env`, then:
+Same steps: copy `.env.example` → `.env`, fill secrets, then:
 
 ```bash
 pip install -r requirements.txt
-python telegram_bot.py
+env -u TELEGRAM_BOT_TOKEN python telegram_bot.py
 ```
 
-Keep the process running while you chat (terminal / `tmux` / Codespace port-free long-poll).
+## Commands
+
+| Command | What it does |
+|---------|----------------|
+| `/start` | Greet + reset memory |
+| `/help` | Help (photos, files, toggles) |
+| `/reset` | Clear conversation memory |
+| `/fast` | Toggle fast mode (tighter system, lower temp, shorter history; may use `XAI_FAST_MODEL`) |
+| `/compact` | Toggle compact replies (~600 chars) |
+| `/model [name]` | Show or set model for this chat (`clear` resets to env default) |
+| `/prefs` | Show toggles |
+| `/status` | Model, vision model, fast/compact, history length, uptime |
+| `/upgrade [notes]` | Ranked upgrade ideas (optional notes + README context) |
+| `/cmds` | List commands |
+| `/keyboard on\|off` | Show/hide reply keyboard (Fast \| Compact \| Prefs \| Upgrade \| Reset) |
+
+## Models
+
+- Default text: `XAI_MODEL` (typically `grok-3`) — kept for cost unless you `/model` or use `/fast`.
+- Vision (when images are present): `XAI_VISION_MODEL` default `grok-4.6`, then `grok-2-vision-1212`, then text-only with a clear note.
+- Fast (optional): `XAI_FAST_MODEL` default `grok-4.20` when `/fast` is on and there are no images.
+
+API base URL defaults to `https://api.x.ai/v1` (override with `XAI_BASE_URL`).
+
+## What this bot does **not** do
+
+- **No auto git commit or push from Telegram.** `/upgrade` and chat can *suggest* changes; use Grok Bot / Attacked Kraken Reboot (or your own checkout) for real repo edits.
+- Does not touch other bots (e.g. trading `cruzbot`).
 
 ## CLI (no Telegram)
 
@@ -85,26 +117,19 @@ Twilio is **not** required. If you want SMS:
 
 ```bash
 pip install twilio
-# set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER, SMS_TO_NUMBER in .env
+# set TWILIO_* and SMS_TO_NUMBER in .env
 python sms_bot.py
 ```
-
-If Twilio env vars are missing, `sms_bot.py` exits with a clear error and points you back to Telegram.
 
 ## Project layout
 
 | File | Role |
 |------|------|
-| `bot.py` | Shared `ask_grok`, memory, CLI |
-| `telegram_bot.py` | 2-way Telegram + collapse UI |
+| `bot.py` | Shared `ask_grok` / `ask_grok_stream`, prefs, vision, CLI |
+| `telegram_bot.py` | Telegram: text/photo/docs, streaming, commands |
 | `sms_bot.py` | Optional Twilio SMS stub |
 | `.env.example` | Env template (no secrets) |
 | `requirements.txt` | Dependencies |
-
-## Models
-
-Default `XAI_MODEL=grok-3`. You can also try `grok-2-latest` or other models listed in the [xAI docs](https://docs.x.ai/).  
-API base URL defaults to `https://api.x.ai/v1` (override with `XAI_BASE_URL` if needed).
 
 ## License
 
